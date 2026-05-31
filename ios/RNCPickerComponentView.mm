@@ -12,6 +12,43 @@
 
 using namespace facebook::react;
 
+static NSMutableArray *itemsFromProps(const std::vector<RNCPickerItemsStruct> &items)
+{
+    NSMutableArray *pickerItems = [NSMutableArray new];
+    for (RNCPickerItemsStruct item : items)
+    {
+        NSMutableDictionary *dictItem = [NSMutableDictionary new];
+        dictItem[@"value"] = RNCPickerConvertFollyDynamicToId(item.value);
+        dictItem[@"label"] = RNCPickerConvertFollyDynamicToId(item.label);
+        dictItem[@"textColor"] = RCTUIColorFromSharedColor(item.textColor);
+        dictItem[@"testID"] = RCTNSStringFromStringNilIfEmpty(item.testID);
+        [pickerItems addObject:dictItem];
+    }
+    return pickerItems;
+}
+
+static BOOL itemsAreEqual(
+    const std::vector<RNCPickerItemsStruct> &newItems,
+    const std::vector<RNCPickerItemsStruct> &oldItems)
+{
+    if (newItems.size() != oldItems.size()) {
+        return NO;
+    }
+
+    for (size_t index = 0; index < newItems.size(); index++) {
+        const auto &newItem = newItems[index];
+        const auto &oldItem = oldItems[index];
+        if (newItem.value != oldItem.value ||
+            newItem.label != oldItem.label ||
+            newItem.textColor != oldItem.textColor ||
+            newItem.testID != oldItem.testID) {
+            return NO;
+        }
+    }
+
+    return YES;
+}
+
 @interface RNCPickerComponentView() <
 UIPickerViewDelegate
 #ifdef RCT_NEW_ARCH_ENABLED
@@ -51,49 +88,65 @@ UIPickerViewDelegate
 - (void)updateProps:(Props::Shared const &)props oldProps:(Props::Shared const &)oldProps
 {
     const auto &newProps = *std::static_pointer_cast<const RNCPickerProps>(props);
-    NSMutableArray *items = [NSMutableArray new];
-    for (RNCPickerItemsStruct item : newProps.items)
-    {
-        NSMutableDictionary *dictItem = [NSMutableDictionary new];
-        dictItem[@"value"] = RNCPickerConvertFollyDynamicToId(item.value);
-        dictItem[@"label"] = RNCPickerConvertFollyDynamicToId(item.label);
-        dictItem[@"textColor"] = RCTUIColorFromSharedColor(item.textColor);
-        dictItem[@"testID"] = RCTNSStringFromStringNilIfEmpty(item.testID);
-        [items addObject:dictItem];
+    const auto &oldPickerProps = static_cast<const RNCPickerProps &>(*_props);
+
+    if (!itemsAreEqual(newProps.items, oldPickerProps.items)) {
+        picker.items = itemsFromProps(newProps.items);
     }
-    picker.items = items;
-    picker.selectedIndex = newProps.selectedIndex;
-    picker.color = RCTUIColorFromSharedColor(newProps.color);
+
+    if (picker.selectedIndex != newProps.selectedIndex) {
+        picker.selectedIndex = newProps.selectedIndex;
+    }
+
+    if (newProps.color != oldPickerProps.color) {
+        picker.color = RCTUIColorFromSharedColor(newProps.color);
+    }
+
     NSString *textAlign = RCTNSStringFromStringNilIfEmpty(newProps.themeVariant);
-    if ([textAlign isEqualToString:@"auto"]){
-        picker.textAlign = NSTextAlignmentNatural;
-    } else if ([textAlign isEqualToString:@"left"]){
-        picker.textAlign = NSTextAlignmentLeft;
-    } else if ([textAlign isEqualToString:@"center"]){
-        picker.textAlign = NSTextAlignmentCenter;
-    } else if ([textAlign isEqualToString:@"right"]){
-        picker.textAlign = NSTextAlignmentRight;
-    } else if ([textAlign isEqualToString:@"justify"]){
-        picker.textAlign = NSTextAlignmentJustified;
+    NSString *oldTextAlign = RCTNSStringFromStringNilIfEmpty(oldPickerProps.themeVariant);
+    if (![textAlign isEqualToString:oldTextAlign]) {
+        if ([textAlign isEqualToString:@"auto"]){
+            picker.textAlign = NSTextAlignmentNatural;
+        } else if ([textAlign isEqualToString:@"left"]){
+            picker.textAlign = NSTextAlignmentLeft;
+        } else if ([textAlign isEqualToString:@"center"]){
+            picker.textAlign = NSTextAlignmentCenter;
+        } else if ([textAlign isEqualToString:@"right"]){
+            picker.textAlign = NSTextAlignmentRight;
+        } else if ([textAlign isEqualToString:@"justify"]){
+            picker.textAlign = NSTextAlignmentJustified;
+        }
     }
-    picker.numberOfLines = newProps.numberOfLines;
-    picker.font = [RCTFont updateFont:picker.font withFamily:RCTNSStringFromStringNilIfEmpty(newProps.fontFamily) size:@(newProps.fontSize) weight:RCTNSStringFromStringNilIfEmpty(newProps.fontWeight) style:RCTNSStringFromStringNilIfEmpty(newProps.fontStyle) variant:nil scaleMultiplier:1];
+
+    if (picker.numberOfLines != newProps.numberOfLines) {
+        picker.numberOfLines = newProps.numberOfLines;
+    }
+
+    if (newProps.fontFamily != oldPickerProps.fontFamily ||
+        newProps.fontSize != oldPickerProps.fontSize ||
+        newProps.fontWeight != oldPickerProps.fontWeight ||
+        newProps.fontStyle != oldPickerProps.fontStyle) {
+        picker.font = [RCTFont updateFont:picker.font withFamily:RCTNSStringFromStringNilIfEmpty(newProps.fontFamily) size:@(newProps.fontSize) weight:RCTNSStringFromStringNilIfEmpty(newProps.fontWeight) style:RCTNSStringFromStringNilIfEmpty(newProps.fontStyle) variant:nil scaleMultiplier:1];
+    }
+
     if (@available(iOS 13.4, *)) {
         NSString *themeVariant = RCTNSStringFromStringNilIfEmpty(newProps.themeVariant);
-            if (themeVariant) {
-                if ([themeVariant isEqual:@"dark"])
-                    picker.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
-                else if ([themeVariant isEqual:@"light"])
-                    picker.overrideUserInterfaceStyle = UIUserInterfaceStyleLight;
-                else
-                    picker.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
-            }
+        NSString *oldThemeVariant = RCTNSStringFromStringNilIfEmpty(oldPickerProps.themeVariant);
+        if (themeVariant && ![themeVariant isEqualToString:oldThemeVariant]) {
+            if ([themeVariant isEqual:@"dark"])
+                picker.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
+            else if ([themeVariant isEqual:@"light"])
+                picker.overrideUserInterfaceStyle = UIUserInterfaceStyleLight;
+            else
+                picker.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
         }
+    }
+
     [super updateProps:props oldProps:oldProps];
 }
 
 // already added in case https://github.com/facebook/react-native/pull/35378 has been merged
-- (BOOL)shouldBeRecycled
++ (BOOL)shouldBeRecycled
 {
     return NO;
 }
