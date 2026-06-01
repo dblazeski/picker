@@ -63,4 +63,21 @@
   XCTAssertTrue(foundElement, @"Couldn't find element with text '%@' in %d seconds", TEXT_TO_LOOK_FOR, TIMEOUT_SECONDS);
 }
 
+- (void)testPickerComponentViewDisablesFabricRecycling
+{
+  Class pickerComponentViewClass = NSClassFromString(@"RNCPickerComponentView");
+  if (!pickerComponentViewClass) {
+    XCTSkip(@"RNCPickerComponentView is only available with React Native new architecture enabled");
+  }
+
+  SEL shouldBeRecycledSelector = @selector(shouldBeRecycled);
+  XCTAssertTrue([pickerComponentViewClass respondsToSelector:shouldBeRecycledSelector]);
+  XCTAssertFalse([pickerComponentViewClass instancesRespondToSelector:shouldBeRecycledSelector]);
+
+  BOOL (*shouldBeRecycled)(id, SEL) =
+      (BOOL (*)(id, SEL))[pickerComponentViewClass methodForSelector:shouldBeRecycledSelector];
+  XCTAssertNotEqual(shouldBeRecycled, NULL);
+  XCTAssertFalse(shouldBeRecycled(pickerComponentViewClass, shouldBeRecycledSelector));
+}
+
 @end
