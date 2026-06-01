@@ -69,10 +69,11 @@ describe('RNCPickerComponentView iOS Fabric lifecycle', () => {
       'const auto &oldPickerProps = static_cast<const RNCPickerProps &>(*_props);',
     );
     expect(updatePropsBody).toContain(
-      'if (!itemsAreEqual(newProps.items, oldPickerProps.items))',
+      'const BOOL itemsChanged = !itemsAreEqual(newProps.items, oldPickerProps.items);',
     );
+    expect(updatePropsBody).toContain('if (itemsChanged)');
     expect(updatePropsBody).toContain(
-      'if (picker.selectedIndex != newProps.selectedIndex)',
+      'if (itemsChanged || newProps.selectedIndex != oldPickerProps.selectedIndex)',
     );
     expect(updatePropsBody).toContain(
       'if (newProps.color != oldPickerProps.color)',

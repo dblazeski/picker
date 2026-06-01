@@ -90,11 +90,12 @@ UIPickerViewDelegate
     const auto &newProps = *std::static_pointer_cast<const RNCPickerProps>(props);
     const auto &oldPickerProps = static_cast<const RNCPickerProps &>(*_props);
 
-    if (!itemsAreEqual(newProps.items, oldPickerProps.items)) {
+    const BOOL itemsChanged = !itemsAreEqual(newProps.items, oldPickerProps.items);
+    if (itemsChanged) {
         picker.items = itemsFromProps(newProps.items);
     }
 
-    if (picker.selectedIndex != newProps.selectedIndex) {
+    if (itemsChanged || newProps.selectedIndex != oldPickerProps.selectedIndex) {
         picker.selectedIndex = newProps.selectedIndex;
     }
 
